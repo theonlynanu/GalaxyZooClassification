@@ -1,0 +1,1 @@
+Images can be downloaded [here](https://zenodo.org/records/3565489) (or via this [direct download link](https://zenodo.org/records/3565489/files/images_gz2.zip?download=1)), and should be unzipped and stored in `data/gz2/images`.
