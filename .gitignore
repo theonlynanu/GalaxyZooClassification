@@ -1,2 +1,6 @@
+# Large data directories
 **/images/*
 **/raw/*
+
+# Exceptions - mostly .md files
+!**.md
