@@ -1,6 +1,7 @@
-# Large data directories
+# --------- Large data directories ---------
 **/images/*
 **/raw/*
 
-# Exceptions - mostly .md files
-!**.md
+# --------- Exceptions ---------
+# .md files used for descriptions, help, or information
+!**.md 
