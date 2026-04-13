@@ -2,6 +2,13 @@
 **/images/*
 **/raw/*
 
+# --------- Generally large file types ---------
+**/*.csv
+
+
+# --------- Editor-related directories and files ---------
+**/.vscode/
+
 # --------- Exceptions ---------
 # .md files used for descriptions, help, or information
 !**.md 
