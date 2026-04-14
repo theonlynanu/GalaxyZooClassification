@@ -181,7 +181,7 @@ def audit_images(df: pd.DataFrame, image_dir: Path) -> pd.DataFrame:
 
 ####        Label Construction          ####
 
-def assign_labels(df: pd.DataFrame, threshold: dict[str: float]) -> pd.Series:
+def assign_labels(df: pd.DataFrame, threshold: dict[str, float]) -> pd.Series:
     """Assigns 4 class labels using the GZ2 decision tree paths
     
     0   Elliptical              T01=smooth
@@ -579,7 +579,9 @@ def export_labeled_csv(df: pd.DataFrame, labels: pd.Series, out_path: Path) -> N
     out["gz2_class"] = labels
     out["gz2_class_name"] = labels.map(CLASS_NAMES).fillna("excluded")
     
-    retained = out[out["gz2_class"] >= 0].reset_index(drop=True)
+    # No longer needed with better data-flow
+    # retained = out[out["gz2_class"] >= 0].reset_index(drop=True)
+    retained = out
     
     Path(out_path).parent.mkdir(parents=True, exist_ok=True)
     
