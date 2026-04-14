@@ -1,52 +1,94 @@
 Loading Hart16 vote fractions: data/gz2/raw/gz2_hart16.csv
     239,695 rows loaded
 Loading samples metadata: data/gz2/raw/gz2sample.csv
-    325,704 rows loaded, columns: ['OBJID', 'REDSHIFT', 'PETROR50_R', 'PETROMAG_R', 'PETROMAG_MR', 'REGION']
+    325,704 rows loaded, columns: ['OBJID', 'REDSHIFT', 'FRACDEV_R', 'PETROR50_R', 'PETROMAG_R', 'PETROMAG_MR', 'REGION']
 Loading filename mapping: data/gz2/raw/gz2_filename_mapping.csv
     355,990 rows loaded
 
 Master table: 239,695 rows after three-way join
     0 rows dropped
 
+Auditing images in data\gz2\images...
+    239,573 images found, 122 missing (0.1%)
+
 Vote fraction summary statistics:
     Column                                                   mean   std     <0.3     0.3-0.7    >0.7   
  ----------------------------------------------------------------------------------
-    t01_smooth_or_features_a01_smooth_debiased               0.398  0.346   116,386    47,850    75,459
-    t01_smooth_or_features_a02_features_or_disk_debiased     0.592  0.362    76,916    43,932   118,847
-    t02_edgeon_a04_yes_debiased                              0.138  0.280   200,713    17,127    21,855
-    t02_edgeon_a05_no_debiased                               0.852  0.276    20,253    19,751   199,397
-    t04_spiral_a08_spiral_debiased                           0.498  0.456   107,004    19,769   112,922
-    t04_spiral_a09_no_spiral_debiased                        0.444  0.458   125,294    19,687    94,426
+    t01_smooth_or_features_a01_smooth_debiased               0.398  0.346   116,288    47,842    75,443
+    t01_smooth_or_features_a02_features_or_disk_debiased     0.593  0.362    76,840    43,916   118,817
+    t02_edgeon_a04_yes_debiased                              0.138  0.280   200,609    17,119    21,845
+    t02_edgeon_a05_no_debiased                               0.852  0.276    20,213    19,744   199,322
+    t04_spiral_a08_spiral_debiased                           0.498  0.456   106,916    19,765   112,892
+    t04_spiral_a09_no_spiral_debiased                        0.444  0.458   125,225    19,682    94,378
 
 Threshold sweep (shared across all tasks):
    Thresh  Elliptical   EdgeOn    Spiral   Non-Spir   Total    Excluded
  ------------------------------------------------------------------------
-     0.50    84,649    18,011    97,062    27,296     227018     5.3%
-     0.55    82,158    17,590    93,216    22,732     215696    10.0%
-     0.60    78,721    16,507    89,311    19,014     203553    15.1%
-     0.65    76,245    14,494    85,252    16,089     192080    19.9%
-     0.70    71,310    12,933    80,558    13,525     178326    25.6%
-     0.75    63,854    10,888    74,931    11,065     160738    32.9%
-     0.80    52,350     9,364    69,727     9,096     140537    41.4%
-     0.85    29,720     7,451    63,226     7,008     107405    55.2%
-     0.90    11,872     5,560    53,819     4,325      75576    68.5%
+     0.50    84,630    18,010    97,039    27,277     226956     5.3%
+     0.55    82,142    17,588    93,194    22,717     215641    10.0%
+     0.60    78,705    16,505    89,290    19,000     203500    15.1%
+     0.65    76,229    14,493    85,234    16,079     192035    19.8%
+     0.70    71,295    12,932    80,540    13,517     178284    25.6%
+     0.75    63,841    10,888    74,916    11,057     160702    32.9%
+     0.80    52,342     9,364    69,712     9,088     140506    41.4%
+     0.85    29,716     7,451    63,212     7,004     107383    55.2%
+     0.90    11,869     5,560    53,807     4,323      75559    68.5%
 
 Assigning labels at thresholds: {'smooth': 0.7, 'edgeon': 0.7, 'spiral': 0.7}
 
 Class balance at defaults thresholds
-    Retrained: 178,326    Excluded: 61,369 (25.6%)
-    Elliptical                71310    40.0%
-    Edge-on disk              12933     7.3%
-    Face-on spiral            80558    45.2%
-    Face-on non-spiral        13525     7.6%
+    Retrained: 178,284    Excluded: 61,289 (25.6%)
+    Elliptical                71295    40.0%
+    Edge-on disk              12932     7.3%
+    Face-on spiral            80540    45.2%
+    Face-on non-spiral        13517     7.6%
 
-Auditing images in data\gz2\images...
-    178,284 images found, 42 missing (0.0%)
-    Missing counts per-class:
-        Elliptical                 15 missing / 71,310 total (0.0%)
-        Edge-on disk                1 missing / 12,933 total (0.0%)
-        Face-on spiral             18 missing / 80,558 total (0.0%)
-        Face-on non-spiral          8 missing / 13,525 total (0.1%)
+Per-class Redshift summary:
+    Class                        n    mean     std     p10     p25     p50     p75     p90
+   ------------------------------------------------------------------------------
+    Elliptical               71295   0.084   0.045   0.029   0.047   0.077   0.114   0.148
+    Edge-on disk             12932   0.068   0.026   0.036   0.051   0.067   0.083   0.102
+    Face-on spiral           80540   0.084   0.035   0.041   0.061   0.081   0.107   0.131
+    Face-on non-spiral       13517   0.109   0.040   0.063   0.082   0.106   0.131   0.161
+
+Per-class FRACDEV_R (1=bulge, 0=disk) summary:
+    Class                        n    mean     std     p10     p25     p50     p75     p90
+   ------------------------------------------------------------------------------
+    Elliptical               71295   0.839   0.291   0.302   0.831   1.000   1.000   1.000
+    Edge-on disk             12932   0.574   0.343   0.061   0.266   0.614   0.909   1.000
+    Face-on spiral           80540   0.482   0.371   0.000   0.127   0.429   0.874   1.000
+    Face-on non-spiral       13517   0.857   0.264   0.417   0.836   1.000   1.000   1.000
+
+Domain split sweep (easy: z < cutoff, hard: z >= cutoff):
+      z*  regime   Elliptical    Edge-on di    Face-on sp    Face-on no    total    mean FRACDEV_R
+  ----------------------------------------------------------------------------------------------------
+  0.0344  easy          10,790         1,113         5,569           357    17,829           0.475
+  0.0344  hard          60,505        11,819        74,971        13,160   160,455           0.681
+
+  0.0495  easy          19,178         2,966        12,761           752    35,657           0.509
+  0.0495  hard          52,117         9,966        67,779        12,765   142,627           0.698
+
+  0.0622  easy          25,820         5,268        21,121         1,276    53,485           0.530
+  0.0622  hard          45,475         7,664        59,419        12,241   124,799           0.716
+
+  0.0718  easy          31,790         7,424        30,103         1,997    71,314           0.548
+  0.0718  hard          39,505         5,508        50,437        11,520   106,970           0.735
+
+  0.0803  easy          37,657         9,177        39,264         3,043    89,141           0.566
+  0.0803  hard          33,638         3,755        41,276        10,474    89,143           0.754
+
+  0.0896  easy          43,410        10,612        48,547         4,400   106,969           0.584
+  0.0896  hard          27,885         2,320        31,993         9,117    71,315           0.774
+
+  0.1025  easy          49,054        11,693        57,865         6,186   124,798           0.601
+  0.1025  hard          22,241         1,239        22,675         7,331    53,486           0.798
+
+  0.1173  easy          54,944        12,421        66,886         8,376   142,627           0.619
+  0.1173  hard          16,351           511        13,654         5,141    35,657           0.825
+
+  0.1380  easy          61,745        12,823        74,949        10,938   160,455           0.637
+  0.1380  hard           9,550           109         5,591         2,579    17,829           0.864
+
 
 Saving plots to output/preprocessing/plots.
 Generating plots...
@@ -54,6 +96,8 @@ Generating plots...
     Saved output/preprocessing/plots/class_balance.png
     Saved output/preprocessing/plots/threshold_sweep.png
     Saved output/preprocessing/plots/redshift_by_class.png
+    Saved output/preprocessing/plots/fracdev_by_class.png
+    Saved output/preprocessing/plots/redshift_fracdev_scatter.png
 
 Saved labeled CSV: data/gz2/processed/gz2_labeled.csv  (178,284 rows)
-Columns: ['dr7objid', 't01_smooth_or_features_a01_smooth_debiased', 't01_smooth_or_features_a02_features_or_disk_debiased', 't02_edgeon_a04_yes_debiased', 't02_edgeon_a05_no_debiased', 't04_spiral_a08_spiral_debiased', 't04_spiral_a09_no_spiral_debiased', 'PETROR50_R', 'PETROMAG_R', 'REDSHIFT', 'PETROMAG_MR', 'REGION', 'sample', 'asset_id', 'gz2_class', 'gz2_class_name']
+Columns: ['dr7objid', 't01_smooth_or_features_a01_smooth_debiased', 't01_smooth_or_features_a02_features_or_disk_debiased', 't02_edgeon_a04_yes_debiased', 't02_edgeon_a05_no_debiased', 't04_spiral_a08_spiral_debiased', 't04_spiral_a09_no_spiral_debiased', 'PETROR50_R', 'PETROMAG_R', 'FRACDEV_R', 'REDSHIFT', 'PETROMAG_MR', 'REGION', 'sample', 'asset_id', 'gz2_class', 'gz2_class_name']

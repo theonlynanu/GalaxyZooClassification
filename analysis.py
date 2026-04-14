@@ -14,7 +14,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
+
 
 ###################### CONSTANTS ######################
 
@@ -78,7 +78,16 @@ def load_hart(path: Path) -> pd.DataFrame:
 def load_samples(path: Path) -> pd.DataFrame:
     """
     Load gz2samples.csv, keeping redshift and size covariates for out-of-domain
-    analysis
+    analysis.
+    
+    Pulls the following metadata columns:
+        REDSHIFT    -   spectroscopic redshift (this is my primary domain-split axis)
+        FRACDEV_R   -   de Vaucouleurs profile coefficient in the r-band, useful as
+                        an independent photometric morphology proxy
+        PETROR50_R  -   Petrosian 50% angular radius in arcseconds, in r-band
+        PETROMAG_R  -   Petrosian apparent magnitude in r-band
+        PETROMAG_MR -   Petrosian absolute magnitude in r-band (k-corrected)
+        REGION      -   sub-sample region flag
     
 
     Args:
@@ -88,7 +97,7 @@ def load_samples(path: Path) -> pd.DataFrame:
         pd.DataFrame: Pandas DataFrame containing all rows with relevant columns
     """
     print(f"Loading samples metadata: {path}")
-    cols = [SAMPLES_KEY, "REDSHIFT", "PETROR50_R", "PETROMAG_R", "PETROMAG_MR", "REGION"]
+    cols = [SAMPLES_KEY, "REDSHIFT", "FRACDEV_R", "PETROR50_R", "PETROMAG_R", "PETROMAG_MR", "REGION"]
     
     df = pd.read_csv(path, usecols=cols)
     
@@ -116,40 +125,6 @@ def load_mapping(path: Path) -> pd.DataFrame:
     return df
 
 
-def audit_images(df: pd.DataFrame, image_dir: Path) -> pd.DataFrame:
-    """Cross-reference labeled DataFrame against available images
-
-    Args:
-        df (pd.DataFrame): labeled and joined DataFrame
-        image_dir (Path): directory containing <asset_id>.jpg files
-
-    Returns:
-        pd.DataFrame: filtered DataFrame containing only rows with associated images
-    """
-    image_dir = Path(image_dir)
-    
-    print(f"\nAuditing images in {image_dir}...")
-    
-    # I initially used .apply(), but this is quite slow
-    # exists = df["asset_id"].apply(lambda asset_id: (image_dir/f"{asset_id}.jpg").exists())
-    
-    # Building the glob is a LOT faster, 15s -> <1s
-    available = {p.stem for p in image_dir.glob("*.jpg")}
-    exists = df["asset_id"].astype(str).isin(available)
-    
-    missing = (~exists).sum()   # Someone said they're unfamiliar with this syntax --- '~' is bitwise NOT
-    print(f"    {exists.sum():,} images found, {missing:,} missing ({100*missing / len(df):.1f}%)")
-    
-    if missing > 0:
-        print("    Missing counts per-class:")
-        for k, name in CLASS_NAMES.items():
-            n_missing = ((~exists) & (df["gz2_class"] == k)).sum()
-            n_total = (df["gz2_class"] == k).sum()
-            print(f"        {name:<22} {n_missing:>6,} missing / {n_total:>6,} total ({100*n_missing/n_total:.1f}%)")
-    
-    return df[exists].reset_index(drop=True)
-
-
 def build_master(hart_path: Path, samples_path: Path, mapping_path: Path) -> pd.DataFrame:
     """Join three data sources on object id
 
@@ -175,6 +150,35 @@ def build_master(hart_path: Path, samples_path: Path, mapping_path: Path) -> pd.
     return df
 
 
+def audit_images(df: pd.DataFrame, image_dir: Path) -> pd.DataFrame:
+    """Cross-reference labeled DataFrame against available images
+
+    Args:
+        df (pd.DataFrame): joined, unlabeled DataFrame
+        image_dir (Path): directory containing <asset_id>.jpg files
+
+    Returns:
+        pd.DataFrame: filtered DataFrame containing only rows with associated images
+    """
+    image_dir = Path(image_dir)
+    
+    print(f"\nAuditing images in {image_dir}...")
+    
+    # I initially used .apply(), but this is quite slow
+    # exists = df["asset_id"].apply(lambda asset_id: (image_dir/f"{asset_id}.jpg").exists())
+    
+    # Building the glob is a LOT faster, 15s -> <1s
+    available = {p.stem for p in image_dir.glob("*.jpg")}
+    exists = df["asset_id"].astype(str).isin(available)
+    
+    missing = (~exists).sum()   # Someone said they're unfamiliar with this syntax; 
+                                # '~' is bitwise NOT, or element-wise with a DataFrame
+                                
+    print(f"    {exists.sum():,} images found, {missing:,} missing ({100*missing / len(df):.1f}%)")
+    
+    return df[exists].reset_index(drop=True)
+
+
 ####        Label Construction          ####
 
 def assign_labels(df: pd.DataFrame, threshold: dict[str: float]) -> pd.Series:
@@ -185,6 +189,14 @@ def assign_labels(df: pd.DataFrame, threshold: dict[str: float]) -> pd.Series:
     2   Face-on spiral          T01=featured    AND     T02=not-edge-on     AND     T04=spiral
     3   Face-on non-spiral      T01=featured    AND     T02=not-edge-on     AND     T04=no-spiral
     -1  Ambiguous
+    
+    NOTE: the 'featured' mask reuses the threshold['smooth'], since smooth vs. featured
+    vote fractoins are complementary. I may split this into two keys later if I need
+    to implement per-task threshold sweeps
+    
+    Args:
+        df (pd.DataFrame): master joined DataFrame
+        threshold (dict[str, float]): keys 'smooth', 'edgeon', and 'spiral
     
     Returns:
         pd.Series: 
@@ -276,6 +288,72 @@ def print_threshold_sweep(df: pd.DataFrame) -> None:
         excld = 100 * (lbl < 0).sum() / len(lbl)
         row = f"  {thresh:>7.2f}  " + "  ".join(f"{c:>8,}" for c in counts)
         print(f"{row}   {total:>8}  {excld:>6.1f}%")
+    
+    
+def print_covariate_summary(df: pd.DataFrame, labels: pd.Series) -> None:
+    """Prints per-class descriptive statistics for REDSHIFT and FRACDEV_R
+
+    Args:
+        df (pd.DataFrame): labeled and filtered DataFrame
+        labels (pd.Series): label Series aligned with df.index
+    """
+    
+    covariates = [
+        ("REDSHIFT", "Redshift"),
+        ("FRACDEV_R", "FRACDEV_R (1=bulge, 0=disk)"),
+    ]
+    
+    for col, label in covariates:
+        if col not in df.columns:
+            print(f"\nSkipping {col} summary (column not found)")
+            continue
+        
+        print(f"\nPer-class {label} summary:")
+        print(f"    {'Class':<22} {'n':>7}  {'mean':>6}  {'std':>6}  {'p10':>6}  {'p25':>6}  {'p50':>6}  {'p75':>6}  {'p90':>6}")
+        print("   " + "-" * 78)
+        
+        for k, name in CLASS_NAMES.items():
+            s = df.loc[labels == k, col].dropna()
+            p = np.percentile(s, [10, 25, 50, 75, 90])
+            print(f"    {name:<22} {len(s):>7}  {s.mean():>6.3f}  {s.std():>6.3f}  "
+                  f"{p[0]:>6.3f}  {p[1]:>6.3f}  {p[2]:>6.3f}  {p[3]:>6.3f}  {p[4]:>6.3f}")
+            
+            
+def print_domain_split_sweep(df: pd.DataFrame, labels: pd.Series) -> None:
+    """
+    Print redshift cutoff sweeps and report per-class counts and mean FRACDEV_R 
+    in easy (low-z) and hard (high-z) regimes
+
+    Args:
+        df (pd.DataFrame): labeled and filtered DataFrame
+        labels (pd.Series): label Series aligned to df.index
+    """
+    if "REDSHIFT" not in df.columns or "FRACDEV_R" not in df.columns:
+        print("\nSkipping domain split sweep (REDSHIFT or FRACDEV_R column(s) not found)")
+        return
+    
+    # Sweep from 10th to 90th percentile in 10-percentile steps
+    z = df.loc[labels >= 0, "REDSHIFT"].dropna()
+    cutoffs = np.percentile(z, np.arange(10, 91, 10))
+    
+    print("\nDomain split sweep (easy: z < cutoff, hard: z >= cutoff):")
+    print(f"  {'z*':>6}  {'regime':<6}  " + "  ".join(f"{CLASS_NAMES[k][:10]:^12}" for k in range(4)) +
+          f"  {'total':^8}  {'mean FRACDEV_R':^14}")
+    print("  " + "-" * 100)
+    
+    for cutoff in cutoffs:
+        for regime, mask_func in [
+            ("easy", lambda z: z < cutoff),
+            ("hard", lambda z: z >= cutoff)
+        ]:
+            regime_mask = mask_func(df["REDSHIFT"]) & (labels >= 0)
+            counts = [(regime_mask & (labels == k)).sum() for k in range(4)]
+            total = sum(counts)
+            fracdev_mean = df.loc[regime_mask, "FRACDEV_R"].mean()
+            row = f"  {cutoff:>6.4f}  {regime:<6}  " + "  ".join(f"{c:>12,}" for c in counts) + f"  {total:>8,}  {fracdev_mean:>14.3f}"
+            print(row)
+            
+        print()
     
 
 ####        Plotting functions        ####
@@ -401,6 +479,68 @@ def plot_redshift_distribution(df: pd.DataFrame, labels: pd.Series, save=False) 
     _save_or_show(fig, "output/preprocessing/plots/redshift_by_class.png", save)
     
     
+def plot_fracdev_distribution(df: pd.DataFrame, labels: pd.Series, save: bool = False) -> None:
+    """Create per-class FRACDEV_R distribution histograms
+    
+    Generally, one can expect:
+        Ellipticals concentrated near 1.0
+        Edge-on disks concentrated near 0.0 (maybe a high-end tail from bulge-dominated edge-on views)
+        Face-on spirals concentrated near 0.0
+        Face-on non-spirals more spread in the range [0,1]
+
+    Args:
+        df (pd.DataFrame): labeled and filtered DataFrame
+        labels (pd.Series): label Series aligned to df.index
+        save (bool, optional): whether to save to file instead of showing. Defaults to False.
+    """
+    if "FRACDEV_R" not in df.columns:
+        print("    Skipping FRACDEV_R plot (FRACDEV_R column not found)")
+        return
+    
+    fig, ax = plt.subplots(figsize=(9, 4))
+    for k, color in zip(range(4), CLASS_COLORS):
+        f = df.loc[labels == k, "FRACDEV_R"].dropna()
+        ax.hist(f, bins=60, color=color, alpha=0.6, label=f"{CLASS_NAMES[k]} (n={len(f):,})", edgecolor=None)
+        
+    ax.set_title("FRACDEV_R Distribution by Class")
+    ax.set_xlabel("FRACDEV_R (1 = de Vaucouleurs / bulge), 0 = exponential / disk")
+    ax.set_ylabel("Count")
+    ax.legend()
+    plt.tight_layout()
+    _save_or_show(fig, "output/preprocessing/plots/fracdev_by_class.png", save)
+    
+    
+def plot_redshift_fracdev_scatter(df: pd.DataFrame, labels: pd.Series, save: bool = False) -> None:
+    """Create 2D scallter of REDSHIFT vs FRACDEV_R; one panel per class
+
+    Args:
+        df (pd.DataFrame): labeled and filtered DataFrame
+        labels (pd.Series): label Series aligned to df.index
+        save (bool, optional): whether to save to file instead of showing. Defaults to False.
+    """
+    if "REDSHIFT" not in df.columns or "FRACDEV_R" not in df.columns:
+        print("    Skipping redshift/FRACDEV_R scatter (one or both columns not found)")
+        return
+    
+    fig, axes = plt.subplots(1, 4, figsize=(18, 4), sharey=True)
+    
+    for ax, (k, color) in zip(axes, zip(range(4), CLASS_COLORS)):
+        mask = labels == k
+        x = df.loc[mask, "REDSHIFT"].dropna()
+        y = df.loc[mask, "FRACDEV_R"].reindex(x.index)
+        
+        hexbin = ax.hexbin(x, y, gridsize=40, cmap="Blues", mincnt=1, linewidths=0.1)
+        ax.set_title(CLASS_NAMES[k], fontsize=9)
+        ax.set_xlabel("Redshift")
+        if k == 0:
+            ax.set_ylabel("FRACDEV_R")
+            
+        fig.colorbar(hexbin, ax=ax, label="count")
+        
+    fig.suptitle("Redshift vs. FRACDEV_R by Class", y=1.01)
+    plt.tight_layout()
+    _save_or_show(fig, "output/preprocessing/plots/redshift_fracdev_scatter.png", save)
+    
     
 def _save_or_show(fig: plt.Figure, filename: Path, save: bool):
     """PRIVATE FUNCTION - do not use outside of this file
@@ -462,6 +602,12 @@ def main(argv):
 
     Example:
         python analysis.py data/gz2/raw/gz2_hart16.csv data/gz2/raw/gz2sample.csv data/gz2/raw/gz2_filename_mapping.csv labeled.csv --save
+        
+    Data flow:
+        1. Build master table (three-way join)
+        2. Audit images (drop rows with no associated image file)
+        3. Assign labels (drop ambiguous rows and use threshold to add class columns)
+        4. Report / plot / export on final set
     """
     if len(argv) < 4:
         print(main.__doc__)
@@ -477,6 +623,9 @@ def main(argv):
     # Build joined master table
     df = build_master(hart_path, samples_path, mapping_path)
     
+    # Audit images 
+    df = audit_images(df, "data/gz2/images")
+    
     # Get and print summaries
     print_summarize_vote_fractions(df)
     print_threshold_sweep(df)
@@ -486,21 +635,26 @@ def main(argv):
     labels = assign_labels(df, THRESHOLDS)
     print_class_balance_report(labels, title="Class balance at defaults thresholds")
     
-    # Filter to only rows that have associated images
-    df["gz2_class"] = labels
-    df=audit_images(df[df["gz2_class"] >= 0].reset_index(drop=True), "data/gz2/images")
-    
     # Re-sync labels after filtering - forgot to do this and it really threw me off
-    labels = df["gz2_class"]
+    df = df[labels >= 0].reset_index(drop=True)
+    labels = assign_labels(df, THRESHOLDS)      # Done twice so that dropped rows are reported
+    
+    # Print covariate analysis on final labeled set
+    print_covariate_summary(df, labels)
+    print_domain_split_sweep(df, labels)
     
     # Generate plots
     if save_figs:
         print("\nSaving plots to output/preprocessing/plots.")
-    print("Generating plots..." if save_figs else "\nGenerating plots...")
+        print("Generating plots...")
+    else: 
+        print("\nGenerating plots...")
     plot_vote_distributions(df, THRESHOLDS, save=save_figs)
     plot_class_balance(labels, save=save_figs)
     plot_threshold_sweep(df, save_figs)
     plot_redshift_distribution(df, labels, save=save_figs)
+    plot_fracdev_distribution(df, labels, save=save_figs)
+    plot_redshift_fracdev_scatter(df, labels, save=save_figs)
     
     
     # Export new CSV
