@@ -61,4 +61,4 @@ CLASS_COLORS = ["#4878CF", "#6ACC65", "#D65F5F", "#B47CC7"]
 
 
 ####        Settings/Configuration       ####
-DEFAULT_SEED = 112568
+DEFAULT_SEED = 112568       # 112568 doesn't come from anywhere in particular, I just hit keys on my keyboard
