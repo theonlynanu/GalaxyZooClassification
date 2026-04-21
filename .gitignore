@@ -2,12 +2,13 @@
 **/images/*
 **/raw/*
 
-# --------- Generally large file types ---------
+# --------- Generally large file types and data logs ---------
 **/*.csv
-
+**/*.json
 
 # --------- Editor-related directories and files ---------
 **/.vscode/
+**/__pycache__
 
 # --------- Exceptions ---------
 # .md files used for descriptions, help, or information
