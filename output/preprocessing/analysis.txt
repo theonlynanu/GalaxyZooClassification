@@ -1,4 +1,4 @@
-Loading Hart16 vote fractions: data/gz2/raw/gz2_hart16.csv
+Loading Hart16 vote fractions: ./data/gz2/raw/gz2_hart16.csv
     239,695 rows loaded
 Loading samples metadata: data/gz2/raw/gz2sample.csv
     325,704 rows loaded, columns: ['OBJID', 'REDSHIFT', 'FRACDEV_R', 'PETROR50_R', 'PETROMAG_R', 'PETROMAG_MR', 'REGION']
@@ -36,7 +36,7 @@ Threshold sweep (shared across all tasks):
 
 Assigning labels at thresholds: {'smooth': 0.7, 'edgeon': 0.7, 'spiral': 0.7}
 
-Class balance at defaults thresholds
+Class balance at default thresholds
     Retrained: 178,284    Excluded: 61,289 (25.6%)
     Elliptical                71295    40.0%
     Edge-on disk              12932     7.3%
@@ -58,6 +58,14 @@ Per-class FRACDEV_R (1=bulge, 0=disk) summary:
     Edge-on disk             12932   0.574   0.343   0.061   0.266   0.614   0.909   1.000
     Face-on spiral           80540   0.482   0.371   0.000   0.127   0.429   0.874   1.000
     Face-on non-spiral       13517   0.857   0.264   0.417   0.836   1.000   1.000   1.000
+
+Per-class angular size (PETROR50_R, arcsec) summary:
+    Class                        n    mean     std     p10     p50     p90     >15"     >20"
+   --------------------------------------------------------------------------------------
+    Elliptical              71,295    2.58    1.04    1.60    2.34    3.87     0.0%     0.0%
+    Edge-on disk            12,932    3.36    1.64    1.72    3.04    5.27     0.1%     0.0%
+    Face-on spiral          80,540    3.80    1.67    2.30    3.41    5.72     0.1%     0.0%
+    Face-on non-spiral      13,517    3.00    1.14    2.00    2.71    4.30     0.0%     0.0%
 
 Domain split sweep (easy: z < cutoff, hard: z >= cutoff):
       z*  regime   Elliptical    Edge-on di    Face-on sp    Face-on no    total    mean FRACDEV_R
@@ -90,14 +98,31 @@ Domain split sweep (easy: z < cutoff, hard: z >= cutoff):
   0.1380  hard           9,550           109         5,591         2,579    17,829           0.864
 
 
-Saving plots to output/preprocessing/plots.
-Generating plots...
+OOD split at z = 0.1025 (p70 of labeled set)
+    Class                    easy N   easy %    hard N   hard %    ratio
+   --------------------------------------------------------------------
+    Elliptical               49,054    68.8%    22,241    31.2%     2.21x
+    Edge-on disk             11,693    90.4%     1,239     9.6%     9.44x
+    Face-on spiral           57,865    71.8%    22,675    28.2%     2.55x
+    Face-on non-spiral        6,186    45.8%     7,331    54.2%     0.84x
+    easy    n = 124,798  z: [0.0100, 0.1025]  mean z = 0.0639  mean FRACDEV_R = 0.601
+    hard    n =  53,486  z: [0.1025, 0.2497]  mean z = 0.1333  mean FRACDEV_R = 0.798
+
+Saving plots...
     Saved output/preprocessing/plots/vote_distributions.png
     Saved output/preprocessing/plots/class_balance.png
     Saved output/preprocessing/plots/threshold_sweep.png
     Saved output/preprocessing/plots/redshift_by_class.png
     Saved output/preprocessing/plots/fracdev_by_class.png
     Saved output/preprocessing/plots/redshift_fracdev_scatter.png
+    Saved output/preprocessing/plots/angular_size_by_class.png
+    Saved output/preprocessing/plots/soft_label_distributions.png
+    Saved output/preprocessing/plots/sample_image_grid.png
+    Saved output/preprocessing/plots/ood_split.png
 
-Saved labeled CSV: data/gz2/processed/gz2_labeled.csv  (178,284 rows)
+Saved labeled CSV: labeled.csv  (178,284 rows)
 Columns: ['dr7objid', 't01_smooth_or_features_a01_smooth_debiased', 't01_smooth_or_features_a02_features_or_disk_debiased', 't02_edgeon_a04_yes_debiased', 't02_edgeon_a05_no_debiased', 't04_spiral_a08_spiral_debiased', 't04_spiral_a09_no_spiral_debiased', 'PETROR50_R', 'PETROMAG_R', 'FRACDEV_R', 'REDSHIFT', 'PETROMAG_MR', 'REGION', 'sample', 'asset_id', 'gz2_class', 'gz2_class_name']
+
+    easy.csv → 124,798 rows
+    hard.csv → 53,486 rows
+    split_meta.txt → z_cut = 0.102477

@@ -1,0 +1,39 @@
+    Domain-split enabled: loading default output from analysis.py (data\gz2\processed\splits\easy.csv)
+Output directory: data\gz2\processed\splits\domain
+
+    124,798 rows loaded
+
+Stratified subsample to 100,000 rows (seed=112568)
+    Per-class subsample targets: {0: 39307, 1: 9370, 2: 46366, 3: 4957}
+    Subsampled to 100,000 rows
+
+Skipping soft targets (pass --soft-targets to enable)
+
+Stratified 70/15/15 split (seed=112568)
+    train: 69,999 val: 15,001 test: 15,000
+    train: Elliptical: 27,515 (39.3%) Edge-on disk: 6,559 (9.4%) Face-on spiral: 32,456 (46.4%) Face-on non-spiral: 3,469 (5.0%)
+    val: Elliptical: 5,896 (39.3%) Edge-on disk: 1,406 (9.4%) Face-on spiral: 6,955 (46.4%) Face-on non-spiral: 744 (5.0%)
+    test: Elliptical: 5,896 (39.3%) Edge-on disk: 1,405 (9.4%) Face-on spiral: 6,955 (46.4%) Face-on non-spiral: 744 (5.0%)
+
+Computing class weights for WeightedRandomSampler
+    Per-class weights (normalized):
+    Elliptical              count= 27,515  weight=0.071559
+    Edge-on disk            count=  6,559  weight=0.300191
+    Face-on spiral          count= 32,456  weight=0.060665
+    Face-on non-spiral      count=  3,469  weight=0.567585
+
+Computing normalization statistics from training images:
+    Using 10,000 training images for stats
+    processed 5,000 / 10,000
+    processed 10,000 / 10,000
+    Channel mean: [0.0459, 0.0406, 0.0306]
+    Channel std: [0.0901, 0.0756, 0.0669]
+
+Writing outputs to data\gz2\processed\splits\domain:
+
+    Wrote data\gz2\processed\splits\domain\train.csv
+    Wrote data\gz2\processed\splits\domain\val.csv
+    Wrote data\gz2\processed\splits\domain\test.csv
+    Wrote data\gz2\processed\splits\domain\stats.json
+
+Done.
