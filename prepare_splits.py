@@ -19,7 +19,7 @@ Usage:
 Default paths (match the current project layout):
     labeled_csv  = data/gz2/processed/gz2_labeled.csv
     image_dir    = data/gz2/images
-    out_dir      = data/gz2/processed/splits/standard/
+    out_dir      = data/gz2/processed/splits/full/
 """
 import json
 import argparse
@@ -38,7 +38,7 @@ from constants import (
 
 ####                CONFIG                 ####
 DEFAULT_LABELED_CSV = Path("data/gz2/processed/gz2_labeled.csv")
-DEFAULT_EASY_CSV = Path("data/gz2/processed/splits/easy.csv")
+DEFAULT_EASY_CSV = Path("data/gz2/processed/splits/easyhard/easy.csv")
 DEFAULT_IMAGE_DIR = Path("data/gz2/images")
 BASE_OUT_DIR = Path("data/gz2/processed/splits")
 DEFAULT_SIZE = 50_000
