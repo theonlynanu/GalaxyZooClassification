@@ -938,7 +938,7 @@ def export_split_csv(df: pd.DataFrame, labels: pd.Series,
     easy = out[out["split"] == "easy"].reset_index(drop=True)
     hard = out[out["split"] == "hard"].reset_index(drop=True)
 
-    easy.to_csv(out_dir / "easy.csv", index=False)
+    easy.to_csv(out_dir /  "easy.csv", index=False)
     hard.to_csv(out_dir / "hard.csv", index=False)
 
     meta = (f"ood_split_col = {constants.OOD_SPLIT_COL}\n"
@@ -1023,7 +1023,7 @@ def main(argv):
 
     #    Export                                                             
     export_labeled_csv(df, labels, out_path)
-    export_split_csv(df, labels, z_cut, out_dir="data/gz2/processed/splits")
+    export_split_csv(df, labels, z_cut, out_dir="data/gz2/processed/splits/easyhard")
     
     
 if __name__ == "__main__":
