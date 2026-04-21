@@ -104,7 +104,7 @@ class GZ2Dataset(Dataset):
     
     def __init__(
         self, csv_path: str | Path, image_dir: str | Path, transform: T.Compose | None,
-        image_suffix: str = ".jpg"
+        image_suffix: str = ".jpg", meta_cols: list[str] | None = None
     ):
         """
         Args:
@@ -113,13 +113,18 @@ class GZ2Dataset(Dataset):
             transform (T.Compose | None): torchvision v2 transform pipeline.
                 If None, returns the raw PIL image
             image_suffix (str, optional): image file extension. Defaults to ".jpg".
+            meta_cols (list[str], optional): list of metadata column names to 
+                include, must already be present in data csv
         """
         self.csv_path = Path(csv_path)
         self.image_dir = Path(image_dir)
         self.transform = transform
         self.image_suffix = image_suffix
+        self.meta_cols = meta_cols or []
         
         df = pd.read_csv(self.csv_path)
+        
+        self.meta = {c: df[c].to_numpy() for c in self.meta_cols if c in df.columns}
         
         # Find required columns
         if "asset_id" not in df.columns or "gz2_class" not in df.columns:
@@ -159,8 +164,9 @@ class GZ2Dataset(Dataset):
             
         hard = torch.as_tensor(self.hard_labels[index], dtype=torch.long)
         soft = torch.as_tensor(self.soft_labels[index], dtype=torch.float32)
+        meta = {c: self.meta[c][index] for c in self.meta_cols}
         
-        return img, hard, soft
+        return img, hard, soft, meta
     
 
 ####                Training Sampler Builder                ####
@@ -178,7 +184,7 @@ def build_weighted_sampler(train_ds: GZ2Dataset, num_samples: int | None = None)
     """
     if train_ds.sample_weights is None:
         raise ValueError(
-            "GZ2Dataset has no sample_weights."
+            "GZ2Dataset has no sample_weights. "
             "Ensure this CSV was properly produced by prepare_splits.py for training"
         )
         
@@ -187,6 +193,31 @@ def build_weighted_sampler(train_ds: GZ2Dataset, num_samples: int | None = None)
         
     weights = torch.as_tensor(train_ds.sample_weights, dtype=torch.double)
     return WeightedRandomSampler(weights=weights, num_samples=num_samples, replacement=True)
+
+
+####                Out-of-Domain DataLoader                ####
+
+def build_ood_loader(hard_csv: Path, image_dir: Path, stats_path: Path, batch_size: int=64, num_workers:int = 4) -> DataLoader:
+    """Build a DataLoader for out-of-domain data (hard.csv from analysis.py)
+    
+    Assumes that out-of-domain loader is for evaluation/testing, not training
+
+    Args:
+        hard_csv (Path): filepath for out-of-domain data
+        image_dir (Path): directory containing <asset_id>.jpg images
+        stats_path (Path): filepath for dataset statistics
+        batch_size (int, optional): batch size. Defaults to 64.
+        num_workers (int, optional): number of workers. Defaults to 4.
+
+    Returns:
+        DataLoader: DataLoader for out-of-domain testing/validation
+    """
+    stats = json.loads(Path(stats_path).read_text())
+    mean, std = stats["normalization"]["mean"], stats["normalization"]["std"]
+    tf = build_eval_transform(mean, std)
+    ds = GZ2Dataset(hard_csv, image_dir, transform=tf, meta_cols=["REDSHIFT", "FRACDEV_R"])
+    
+    return DataLoader(ds, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
 
 ################### TESTING AND DEBUGGING ###################
@@ -212,25 +243,30 @@ def _smoke_test(splits_dir: Path, image_dir: Path, show_batch: bool = False) -> 
     eval_tf = build_eval_transform(mean, std)
     
     splits = [
-        ("train", splits_dir / "train.csv", train_tf),
-        ("val", splits_dir / "val.csv", eval_tf),
-        ("test", splits_dir / "test.csv", eval_tf)      # Eval and testing use the same transformation pipeline
+        ("train", splits_dir / "train.csv", train_tf, []),
+        ("val", splits_dir / "val.csv", eval_tf, []),
+        ("test", splits_dir / "test.csv", eval_tf, []),     # Eval and testing use the same transformation pipeline
+        ("ood (hard)", splits_dir.parent / "easyhard" / "hard.csv", eval_tf, ["REDSHIFT", "FRACDEV_R"])
     ]
     
-    for name, csv_path, transform in splits:
+    for name, csv_path, transform, meta_cols in splits:
         print(f"\n[{name}] loading {csv_path}")
-        ds = GZ2Dataset(csv_path=csv_path, image_dir=image_dir, transform=transform)
+        ds = GZ2Dataset(csv_path=csv_path, image_dir=image_dir, transform=transform, meta_cols=meta_cols)
         print(f"    len = {len(ds):,}")
         print(f"    has_soft_targets = {ds.has_soft_targets}")
         print(f"    has_sample_weights = {ds.sample_weights is not None}")
         
         # pull an item and check shape/datatypes
-        img, hard, soft = ds[0]
+        img, hard, soft, meta = ds[0]
         print(f"    [item 0] image shape = {tuple(img.shape)}  dtype={img.dtype}")
         print(f"             hard label = {hard.item()}  ({CLASS_NAMES.get(hard.item(), "?")})")
         print(f"             soft label = {soft.tolist()}  sum={soft.sum().item():.4f}")
         print(f"         image min/max/mean = "
               f"{img.min().item():.3f} / {img.max().item():.3f} / {img.mean().item():.3f}")
+        if "REDSHIFT" in meta:
+            print(f"    Redshift = {meta["REDSHIFT"]}")
+        if "FRACDEV_R" in meta:
+            print(f"    Fracdev (r-band) = {meta["FRACDEV_R"]}")
         
         # build DataLoader and iterate a few times
         if name == "train":
@@ -240,7 +276,7 @@ def _smoke_test(splits_dir: Path, image_dir: Path, show_batch: bool = False) -> 
             loader = DataLoader(ds, batch_size=32, shuffle=False, num_workers=4)
             
         print(f"    iterating 2 batches from DataLoader...")
-        for i, (imgs, hards, softs) in enumerate(loader):
+        for i, (imgs, hards, softs, metas) in enumerate(loader):
             print(f"    batch{i}: imgs={tuple(imgs.shape)} "
                   f"hards={tuple(hards.shape)} softs={tuple(softs.shape)} "
                   f"class_counts={np.bincount(hards.numpy(), minlength=N_CLASSES).tolist()}"
