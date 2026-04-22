@@ -6,6 +6,7 @@
 **/*.csv
 **/*.json
 **/*.npz
+**/*.pt
 
 # --------- Editor-related directories and files ---------
 **/.vscode/
