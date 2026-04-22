@@ -1,5 +1,5 @@
 """
-Danyal Ahmed - Spring 2026
+Danyal Ahmed - April 2026
 
 feature_extraction.py
 Extracts a fixed-length morphology feature vector from each GZ2 image
