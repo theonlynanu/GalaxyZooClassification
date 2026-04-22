@@ -140,6 +140,12 @@ class GZ2Dataset(Dataset):
         self.has_soft_targets = all(c in df.columns for c in SOFT_COLS)
         if self.has_soft_targets:
             self.soft_labels = df[SOFT_COLS].to_numpy(dtype=np.float32)
+            if np.isnan(self.soft_labels).any():
+                n_bad = np.isnan(self.soft_labels).any(axis=1).sum()
+                raise RuntimeError(
+                    f"{n_bad} rows in {csv_path} have NaN soft targets. "
+                    f"Regenerate with prepare_splits.py after fixing compute_soft_targets."
+                )
         else:
             self.soft_labels = np.eye(N_CLASSES, dtype=np.float32)[self.hard_labels]
             

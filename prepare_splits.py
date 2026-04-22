@@ -133,12 +133,12 @@ def compute_soft_targets(df: pd.DataFrame) -> pd.DataFrame:
     Returns:
         pd.DataFrame: DataFrame with four new `soft_k` columns
     """
-    p_smooth = df[COL_SMOOTH].to_numpy()
-    p_featured = df[COL_FEATURED].to_numpy()
-    p_edgeon = df[COL_EDGEON].to_numpy()
-    p_not_edge = df[COL_NOT_EDGEON].to_numpy()
-    p_spiral = df[COL_SPIRAL].to_numpy()
-    p_no_spiral = df[COL_NOSPIRAL].to_numpy()
+    p_smooth = np.nan_to_num(df[COL_SMOOTH].to_numpy(), nan=0.0)
+    p_featured = np.nan_to_num(df[COL_FEATURED].to_numpy(), nan=0.0)
+    p_edgeon = np.nan_to_num(df[COL_EDGEON].to_numpy(), nan=0.0)
+    p_not_edge = np.nan_to_num(df[COL_NOT_EDGEON].to_numpy(), nan=0.0)
+    p_spiral = np.nan_to_num(df[COL_SPIRAL].to_numpy(), nan=0.0)
+    p_no_spiral = np.nan_to_num(df[COL_NOSPIRAL].to_numpy(), nan=0.0)
     
     raw = np.column_stack([
         p_smooth,
@@ -165,6 +165,15 @@ def compute_soft_targets(df: pd.DataFrame) -> pd.DataFrame:
     soft_argmax = normalized.argmax(axis=1)
     agreement = (soft_argmax == df["gz2_class"].to_numpy()).mean()
     print(f"    Soft argmax vs hard label agreement: {100 * agreement:.2f}%")
+    
+    # Check for NaN values
+    if np.isnan(normalized).any():
+        n_bad = np.isnan(normalized).any(axis=1).sum()
+        raise RuntimeError(
+            f"{n_bad} rows have NaN soft targets after normalization. "
+            f"This suggests a NaN in the input vote fractions that wasn't caught "
+            f"by nan_to_num; Inspect the input CSV."
+        )
     
     out = df.copy()
     for k in range(4):
