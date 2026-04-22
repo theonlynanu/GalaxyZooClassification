@@ -1,0 +1,27 @@
+BasicCNN smoke test
+======================================================
+
+Layer          Output shape                     Params
+------------------------------------------------------
+stem           (1, 32, 112, 112)                 4,768
+block1         (1, 64, 56, 56)                  55,616
+block2         (1, 128, 28, 28)                221,824
+block3         (1, 192, 14, 14)                553,920
+block4         (1, 256, 7, 7)                1,033,472
+gap            (1, 256, 1, 1)                        0
+dropout        (1, 256)                              0
+classifier     (1, 4)                            1,028
+------------------------------------------------------
+Total                                        1,870,628
+
+Forward pass check (batch size = 8)
+    input shape     = (8, 3, 224, 224)
+    features shape  = (8, 256, 7, 7)
+    logits shape    = (8, 4)
+    input range     = [-0.060, 0.059]
+
+Gradient flow check (all should be nonzero):
+    33/33 parameter tensors received with nonzero gradients
+    loss = 1.3866
+
+Done
