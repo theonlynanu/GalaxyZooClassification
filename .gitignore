@@ -5,6 +5,7 @@
 # --------- Generally large file types and data logs ---------
 **/*.csv
 **/*.json
+**/*.npz
 
 # --------- Editor-related directories and files ---------
 **/.vscode/
