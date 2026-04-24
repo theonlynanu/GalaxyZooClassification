@@ -1,7 +1,7 @@
 # --------- Large data directories ---------
 **/images/*
 **/raw/*
-**/output/runs/**
+**/output/
 
 # --------- Generally large file types and data logs ---------
 **/*.csv
