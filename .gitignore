@@ -3,11 +3,12 @@
 **/raw/*
 **/output/
 
-# --------- Generally large file types and data logs ---------
+# --------- Generally large file types and extraneous data logs ---------
 **/*.csv
 **/*.json
 **/*.npz
 **/*.pt
+data/**/*.txt
 
 # --------- Editor-related directories and files ---------
 **/.vscode/
