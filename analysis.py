@@ -865,6 +865,70 @@ def plot_ood_split(df: pd.DataFrame, labels: pd.Series,
     fig.suptitle(f"OOD Domain Split at z = {z_cut:.4f} (p{percentile})", y=1.01)
     plt.tight_layout()
     _save_or_show(fig, "output/preprocessing/plots/ood_split.png", save)
+    
+
+def plot_full_class_distribution_vs_redshift(
+    labeled_csv: Path, out_path: Path, n_bins: int = 24
+) -> None:
+    """Plot class composition vs redshift for the entire labeled dataset.
+
+    Unlike the version in evaluate_domain.py, this uses every labeled galaxy
+    (easy + hard combined), so it shows the true GZ2 redshift-class distribution
+    rather than the evaluation subset.
+
+    Args:
+        labeled_csv: path to gz2_labeled.csv (or easy.csv + hard.csv combined)
+        out_path:    where to save the PNG
+        n_bins:      number of quantile-based redshift bins (default 12 for
+                     more resolution than the 8-bin evaluation plot)
+    """
+    import matplotlib.pyplot as plt
+    
+    from constants import (
+        CLASS_NAMES, N_CLASSES, CLASS_COLORS,
+        OOD_SPLIT_COL, OOD_SPLIT_DEFAULT,
+    )
+    
+    df = pd.read_csv(labeled_csv)
+    df = df[df["gz2_class"].between(0, N_CLASSES - 1)]
+    df = df.dropna(subset=[OOD_SPLIT_COL]).reset_index(drop=True)
+    z = df[OOD_SPLIT_COL].to_numpy()
+    y = df["gz2_class"].to_numpy()
+
+    # Quantile bins so each bin has roughly equal sample count
+    edges = np.quantile(z, np.linspace(0, 1, n_bins + 1))
+    for i in range(1, len(edges)):
+        if edges[i] <= edges[i - 1]:
+            edges[i] = edges[i - 1] + 1e-8
+    bin_idx = np.clip(
+        np.digitize(z, edges[1:-1], right=False), 0, n_bins - 1
+    )
+
+    fracs = np.zeros((n_bins, N_CLASSES))
+    centers = np.zeros(n_bins)
+    totals = np.zeros(n_bins, dtype=int)
+    for b in range(n_bins):
+        mask = bin_idx == b
+        totals[b] = int(mask.sum())
+        if totals[b] == 0:
+            continue
+        centers[b] = float(np.median(z[mask]))
+        for k in range(N_CLASSES):
+            fracs[b, k] = (y[mask] == k).sum() / totals[b]
+
+    z_cut = float(np.quantile(z, OOD_SPLIT_DEFAULT / 100))
+
+    fig, ax2 = plt.subplots(figsize=(9, 6))
+
+    ax2.hist(z, bins=60, color="#888", edgecolor="black", linewidth=0.3)
+    ax2.axvline(z_cut, color="black", ls=":", lw=1.2, alpha=0.7)
+    ax2.set_xlabel("Redshift")
+    ax2.set_ylabel("Galaxies")
+    ax2.grid(alpha=0.3)
+
+    plt.tight_layout()
+    plt.savefig(out_path, dpi=200, bbox_inches="tight")
+    plt.close(fig)
      
     
 def _save_or_show(fig: plt.Figure, filename: Path, save: bool):
@@ -1024,6 +1088,7 @@ def main(argv):
     #    Export                                                             
     export_labeled_csv(df, labels, out_path)
     export_split_csv(df, labels, z_cut, out_dir="data/gz2/processed/splits/easyhard")
+    plot_full_class_distribution_vs_redshift(out_path, "output/domain_eval/class_distribution.png")
     
     
 if __name__ == "__main__":
