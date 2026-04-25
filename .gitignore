@@ -17,3 +17,7 @@ data/**/*.txt
 # --------- Exceptions ---------
 # .md files used for descriptions, help, or information
 !**.md 
+
+# Sample images
+!data/gz2/samples
+!data/gz2/samples/**
