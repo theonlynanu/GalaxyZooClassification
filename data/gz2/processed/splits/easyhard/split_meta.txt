@@ -1,4 +1,0 @@
-ood_split_col = REDSHIFT
-ood_split_z_cut = 0.102477
-easy_n = 124798
-hard_n = 53486
